@@ -1,0 +1,75 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: hd-eks-cluster
+  region: eu-central-1  # Frankfurt region
+  version: "1.28"
+
+vpc:
+  id: "vpc-04f0f64309fce9f5a"  # Use pre-existing VPC
+  subnets:
+    private:
+      eu-central-1b:
+        id: "subnet-0d0d7765838dbc540"
+      eu-central-1c:
+        id: "subnet-04e6ae00cd297630d"
+
+managedNodeGroups:
+  - name: worker-nodes
+    instanceType: t3.micro
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 2
+    privateNetworking: true
+    subnets:
+      - "subnet-0d0d7765838dbc540"
+      - "subnet-04e6ae00cd297630d"
+    labels:
+      role: worker
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        ebs: true
+        albIngress: true
+    ssh:
+      allow: true
+      publicKeyName: "MyNewKeyPair"
+    securityGroups:
+      attachIDs:
+        - "sg-035d1a8b7abfd653a"  # Replace with your security group ID
+    preBootstrapCommands:
+      - |
+        echo "Assigning static IP to worker node"
+        MAC=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
+        ENI_ID=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/interface-id)
+        aws ec2 assign-private-ip-addresses --network-interface-id $ENI_ID --private-ip-addresses 172.31.32.10,172.31.0.10
+
+nodeGroups:
+  - name: control-plane
+    instanceType: t3.micro
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 1
+    privateNetworking: true
+    subnets:
+      - "subnet-0d0d7765838dbc540"
+    labels:
+      role: control-plane
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        ebs: true
+        albIngress: true
+    ssh:
+      allow: true
+      publicKeyName: "MyNewKeyPair"
+    securityGroups:
+      attachIDs:
+        - "sg-035d1a8b7abfd653a"  # Replace with your security group ID
+    preBootstrapCommands:
+      - |
+        echo "Assigning static IP to control-plane node"
+        MAC=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
+        ENI_ID=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/interface-id)
+        aws ec2 assign-private-ip-addresses --network-interface-id $ENI_ID --private-ip-addresses 172.31.32.5
