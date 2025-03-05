@@ -16,3 +16,6 @@ vm public ip address:
 or
 
 	dig +short myip.opendns.com @resolver1.opendns.com
+
+ #### Correct way to login through SSH
+ 	ssh -i "~/.ssh/MyNewKeyPair.pem" ec2-user@ec2-3-120-16-168.eu-central-1.compute.amazonaws.com
